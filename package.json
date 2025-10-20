@@ -1,0 +1,30 @@
+{
+  "name": "string-analyzer-service",
+  "version": "1.0.0",
+  "description": "An API service that analyzes strings and stores their computed properties.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dev-musty/String-Analyzer-Service.git"
+  },
+  "keywords": [],
+  "author": "Mustapha Ridwan",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Dev-musty/String-Analyzer-Service/issues"
+  },
+  "homepage": "https://github.com/Dev-musty/String-Analyzer-Service#readme",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "nodemon": "^3.1.10"
+  }
+}
