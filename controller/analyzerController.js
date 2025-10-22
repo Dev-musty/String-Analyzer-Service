@@ -20,12 +20,10 @@ export const analyzeString = async (req,res) => {
     if(value === revString){
       palindrome = true
     }
-    console.log( typeof palindrome)
     //word count
     const trimString = value.trim()
     const words = trimString.split(/\s+/)
     const wordsLength = parseInt(words.length)
-    console.log(typeof wordsLength)
     // sha256
     const hash = sha256(value).toString();
     // character_frequency_map
@@ -38,7 +36,6 @@ export const analyzeString = async (req,res) => {
     // unique character
     const uniqueCha = Object.keys(charMap).filter((ch) => charMap[ch] === 1 && ch !== ' ')
     const uniqueChaLength = parseInt(uniqueCha.length)
-    console.log(typeof uniqueChaLength)
     const response = {
       id: hash,
       value: value,
@@ -53,7 +50,7 @@ export const analyzeString = async (req,res) => {
       created_at: new Date().toISOString()
     }
     responseStorage.set(value,response)
-    return res.status(200).json(response)
+    return res.status(201).json(response)
   } catch (error) {
     return res.status(500).json({message: `${error.message}`})
   }
@@ -93,10 +90,14 @@ export const filterStrings = async (req,res) => {
   try {
     // convert query parameters to match the datatype of exsiting data
     const isPalindrome = is_palindrome ? (is_palindrome.toLowerCase() === 'true' ? true : (is_palindrome.toLowerCase() === 'false' ? false : null)) : undefined
-    const minLength = Number(min_length)
-    const maxLength = Number(max_length)
-    const wordCount = Number(word_count)
+    const minLength = min_length ? Number(min_length) : undefined
+    const maxLength = max_length ? Number(max_length) : undefined
+    const wordCount = word_count ? Number(word_count) : undefined
     const containsChar = typeof contains_character === 'string' ? contains_character.toLowerCase() : null
+
+    if(minLength > maxLength || minLength < 0 || maxLength < 0 || wordCount < 0){
+      return res.status(422).json({message: 'Query parsed but resulted in conflicting filters'})
+    }
 
 
     if (isPalindrome === null || !Number.isInteger(minLength) || !Number.isInteger(maxLength) || !Number.isInteger(wordCount) || !containsChar) {
@@ -128,5 +129,86 @@ export const filterStrings = async (req,res) => {
         })
   } catch (error) {
     return res.status(500).json({message: `${error.message}`})
+  }
+}
+
+export const filterByNaturalLang = async (req,res) => {
+  const {query} = req.query
+  try {
+    if(!query){
+      return res.status(400).json({message: 'Unable to parse natural language query'})
+    }
+    const match = []
+    const filters = {}
+    if(query === 'all single word palindromic strings'){
+      for(const data of responseStorage.entries()){
+        const wordCount = data[1].properties.word_count === 1
+        const palindrome = data[1].properties.is_palindrome === true
+        if(wordCount && palindrome){
+          match.push(data[1])
+        }
+        filters.word_count = Number(wordCount)
+        filters.is_palindrome = palindrome
+      }
+    }
+    if(query === 'strings longer than 10 characters'){
+      for(const data of responseStorage.entries()){
+        const length = data[1].properties.length >= 11
+        if(length){
+          match.push(data[1])
+        }
+        filters.length = data[1].properties.length
+      }
+    }
+    if (query === 'palindromic strings that contain the first vowel') {
+      for(const data of responseStorage.entries()){
+        const palindrome = data[1].properties.is_palindrome === true
+        const vowel = 'a'
+        const character = vowel in data[1].properties.character_frequency_map
+        if(palindrome && character){
+          match.push(data[1])
+        }
+        filters.is_palindrome = palindrome
+        filters.vowel = character
+      }
+    }
+    if (query === 'strings containing the letter z') {
+      for(const data of responseStorage.entries()){
+        const char = 'z'
+        const character = char in data[1].properties.character_frequency_map
+        if(character){
+          match.push(data[1])
+        }
+        filters.character = character
+      }
+    }
+    return res.status(200).json({
+      data: match,
+      count: match.length,
+      interpreted_query:{
+        original: query,
+        parsed_filters: {
+          ...filters
+        }
+      }
+    })
+  } catch (error) {
+    return res.status(500).json({message: `${error.message}`})
+  }
+}
+
+export const delString = async (req,res) => {
+  const {string_value} = req.params
+  try {
+    if(!string_value){
+      return res.status(400).json({message: ' Invalid request body or missing "value" field'})
+    }
+    if(!responseStorage.has(string_value)){
+      return res.status(404).json({message: 'String does not exist in the system'})
+    }
+    const response = responseStorage.delete(string_value)
+    return res.status(204).json(response)
+  } catch (error) {
+      return res.status(500).json({message: `${error.message}`})
   }
 }
