@@ -4,20 +4,20 @@ const responseStorage = new Map()
 export const analyzeString = async (req,res) => {
   const {value} = req.body
   try {
-    if(!value){
-      return res.status(400).json({message: ' Invalid request body or missing "value" field'})
+    if (value === undefined || value === null) {
+      return res.status(422).json({ message: 'Invalid request body or missing "value" field' })
     }
-    if(typeof value !== 'string'){
-      return res.status(422).json({message: 'Invalid data type for "value" (must be string)'})
+    if (typeof value !== 'string') {
+      return res.status(422).json({ message: 'Invalid data type for "value" (must be string)' })
     }
-    if(responseStorage.has(value)){
-      return res.status(409).json({message: 'String already exists in the system'})
+    if (responseStorage.has(value)) {
+      return res.status(409).json({ message: 'String already exists in the system' })
     }
-    // palindrome
+    // palindrome (case-insensitive, character-based)
     let palindrome = false
     const normalizedString = value.toLowerCase()
-    const revString = normalizedString.split(" ").reverse().join(" ")
-    if(value === revString){
+    const revString = normalizedString.split('').reverse().join('')
+    if (normalizedString === revString) {
       palindrome = true
     }
     //word count
@@ -34,8 +34,8 @@ export const analyzeString = async (req,res) => {
       charMap[char.toLowerCase()] = (charMap[char] || 0) + 1
     }
     // unique character
-    const uniqueCha = Object.keys(charMap).filter((ch) => charMap[ch] === 1 && ch !== ' ')
-    const uniqueChaLength = parseInt(uniqueCha.length)
+    const uniqueCha = Object.keys(charMap).filter((ch) => charMap[ch] === 1)
+    const uniqueChaLength = uniqueCha.length
     const response = {
       id: hash,
       value: value,
@@ -88,11 +88,14 @@ export const getString = async (req,res) => {
 export const filterStrings = async (req,res) => {
   const {is_palindrome,min_length,max_length,word_count,contains_character} = req.query
   try {
+      if (is_palindrome === undefined || min_length === undefined || max_length === undefined || word_count === undefined || contains_character === undefined) {
+        return res.status(422).json({ message: 'Missing required query parameters' })
+      }
     // convert query parameters to match the datatype of exsiting data
     const isPalindrome = is_palindrome ? (is_palindrome.toLowerCase() === 'true' ? true : (is_palindrome.toLowerCase() === 'false' ? false : null)) : undefined
-    const minLength = min_length ? Number(min_length) : undefined
-    const maxLength = max_length ? Number(max_length) : undefined
-    const wordCount = word_count ? Number(word_count) : undefined
+    const minLength =  Number(min_length)
+    const maxLength =  Number(max_length)
+    const wordCount =  Number(word_count)
     const containsChar = typeof contains_character === 'string' ? contains_character.toLowerCase() : null
 
     if(minLength > maxLength || minLength < 0 || maxLength < 0 || wordCount < 0){
@@ -187,9 +190,7 @@ export const filterByNaturalLang = async (req,res) => {
       count: match.length,
       interpreted_query:{
         original: query,
-        parsed_filters: {
-          ...filters
-        }
+        parsed_filters: filters
       }
     })
   } catch (error) {
@@ -206,8 +207,8 @@ export const delString = async (req,res) => {
     if(!responseStorage.has(string_value)){
       return res.status(404).json({message: 'String does not exist in the system'})
     }
-    const response = responseStorage.delete(string_value)
-    return res.status(204).json(response)
+    responseStorage.delete(string_value)
+    return res.status(204).send()
   } catch (error) {
       return res.status(500).json({message: `${error.message}`})
   }
